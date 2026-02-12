@@ -35,8 +35,9 @@
     document.body.classList.toggle("theme-dark", isDark);
     const btn = document.getElementById("btnTheme");
     if (btn) {
-      btn.textContent = isDark ? "Theme: Dark" : "Theme: Light";
       btn.setAttribute("aria-pressed", isDark ? "true" : "false");
+      btn.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+      btn.setAttribute("title", isDark ? "Switch to light theme" : "Switch to dark theme");
     }
     localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
   }
@@ -113,6 +114,12 @@
     if (statTotal) statTotal.textContent = stats.total;
     if (statApplicable) statApplicable.textContent = stats.applicableY;
     if (statImplemented) statImplemented.textContent = stats.implementedY;
+    const statTotalDock = document.getElementById("statTotalDock");
+    const statApplicableDock = document.getElementById("statApplicableDock");
+    const statImplementedDock = document.getElementById("statImplementedDock");
+    if (statTotalDock) statTotalDock.textContent = stats.total;
+    if (statApplicableDock) statApplicableDock.textContent = stats.applicableY;
+    if (statImplementedDock) statImplementedDock.textContent = stats.implementedY;
 
     let currentDomain = null;
     for (const item of ITEMS) {
@@ -158,14 +165,16 @@
           </div>
           <div class="status">
             <span class="${badge.cls}">${badge.text}</span>
-            <button type="button" class="btn btn-ghost btn-sm" data-action="toggle" aria-expanded="${r.collapsed ? "false" : "true"}">
-              ${r.collapsed ? "Expand" : "Collapse"}
+            <button type="button" class="toggle-btn" data-action="toggle" aria-expanded="${r.collapsed ? "false" : "true"}">
+              <span class="toggle-text">${r.collapsed ? "Details" : "Hide details"}</span>
+              <span class="toggle-icon" aria-hidden="true"></span>
             </button>
           </div>
         </div>
 
         <div class="rowBody">
-          <div class="fields">
+          <div class="rowBodyInner">
+            <div class="fields">
             <div class="field col-3">
               <label>Applicable? (Y/N)</label>
               <select data-k="applicable">
@@ -216,7 +225,7 @@
               }</textarea>
             </div>
 
-            <div class="field col-6" data-show="inclusion">
+            <div class="field col-12" data-show="inclusion">
               <label>Reasons for inclusion</label>
               <div class="reasons-grid">
                 ${
@@ -246,6 +255,7 @@
                 escapeHtml(r.inclusionReason)
               }</textarea>
             </div>
+            </div>
           </div>
         </div>
       `;
@@ -257,6 +267,13 @@
         el.addEventListener("change", () => onChange(item.id, el));
         el.addEventListener("input", () => onInput(item.id, el));
       });
+      const head = row.querySelector(".rowHead");
+      if (head) {
+        head.addEventListener("click", (e) => {
+          if (e.target.closest("button")) return;
+          toggleRow(item.id);
+        });
+      }
       const toggleBtn = row.querySelector("[data-action='toggle']");
       if (toggleBtn) {
         toggleBtn.addEventListener("click", () => toggleRow(item.id));
@@ -463,6 +480,21 @@
     render();
   }
 
+  function updateDockVisibility() {
+    const dock = document.getElementById("statsDock");
+    const hero = document.querySelector(".soa-hero");
+    if (!dock || !hero) return;
+    const show = hero.getBoundingClientRect().bottom < 0;
+    dock.classList.toggle("is-visible", show);
+    dock.setAttribute("aria-hidden", show ? "false" : "true");
+  }
+
+  function updateBackToTop() {
+    const btn = document.getElementById("btnTop");
+    if (!btn) return;
+    btn.classList.toggle("is-visible", window.scrollY > 360);
+  }
+
   // Wiring
   document.getElementById("q").addEventListener("input", () => render());
   document.getElementById("btnCsv").addEventListener("click", exportCsv);
@@ -481,5 +513,20 @@
     e.target.value = "";
   });
 
+  const topBtn = document.getElementById("btnTop");
+  if (topBtn) {
+    topBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
+  window.addEventListener("scroll", () => {
+    updateDockVisibility();
+    updateBackToTop();
+  });
+  window.addEventListener("resize", updateDockVisibility);
+
   initTheme();
   render();
+  updateDockVisibility();
+  updateBackToTop();
