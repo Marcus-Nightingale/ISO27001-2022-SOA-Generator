@@ -10,118 +10,113 @@
           rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/duotone/style.css"/>
     <link rel="stylesheet" href="styles.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
 </head>
 <body>
-    <a class="skip-link" href="#controls">Skip to controls</a>
-    <main class="page">
-        <div class="bento-grid">
-            <section class="card card-hero soa-hero">
-                <span class="eyebrow">ISO/IEC 27001:2022</span>
-                <h1>Statement of Applicability (SoA) Generator</h1>
-                <p class="lead">
-                    Single-file SoA builder (client-side only). Your data is saved in your browser (localStorage) and never
-                    leaves your machine unless you export it.
-                    Based on your template columns: Applicable, Exclusion justification, Implemented, Implementation
-                    details, Inclusion reasons (LR/CO/BR/BP/RRA), and Reason for inclusion.
-                </p>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <strong id="statTotal">0</strong>
-                        <span>Total controls</span>
-                    </div>
-                    <div class="stat">
-                        <strong id="statApplicable">0</strong>
-                        <span>Applicable (Y)</span>
-                    </div>
-                    <div class="stat">
-                        <strong id="statImplemented">0</strong>
-                        <span>Implemented (Y)</span>
-                    </div>
+<a class="skip-link" href="#controls">Skip to controls</a>
+<main class="page">
+    <div class="bento-grid">
+        <section class="card card-hero soa-hero">
+            <span class="eyebrow">ISO/IEC 27001:2022</span>
+            <h1>Statement of Applicability (SoA) Generator</h1>
+            <p class="lead">
+                Single-file SoA builder (client-side only). Your data is saved in your browser (localStorage) and never
+                leaves your machine unless you export it.
+            </p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <strong id="statTotal">0</strong>
+                    <span>Total controls</span>
                 </div>
-            </section>
+                <div class="stat">
+                    <strong id="statApplicable">0</strong>
+                    <span>Applicable (Y)</span>
+                </div>
+                <div class="stat">
+                    <strong id="statImplemented">0</strong>
+                    <span>Implemented (Y)</span>
+                </div>
+            </div>
+        </section>
 
-            <section class="card card-search soa-toolbar">
-                <h2>Search & actions</h2>
-                <div class="search-field">
-                    <div class="search-row">
-                        <input id="q" class="search-input" type="text"
-                               placeholder="Search controls (e.g. logging, supplier, backup, A.8.15)…"/>
-                        <button class="btn" id="btnCsv">Export CSV</button>
-                    </div>
-                    <div class="action-row">
+        <section class="card card-search soa-toolbar">
+            <h2>Search & actions</h2>
+            <div class="search-field">
+                <div class="search-row">
+                    <input id="q" class="search-input" type="text"
+                           placeholder="Search controls (e.g. logging, supplier, backup, A.8.15)…"/>
+                </div>
+                <div class="action-row">
+                        <button class="btn" id="btnXlsx">Export XLSX</button>
                         <button class="btn btn-ghost" id="btnJson">Export JSON</button>
-                        <label class="btn btn-ghost file-btn">
-                            Import JSON
-                            <input id="importJson" type="file" accept="application/json"/>
-                        </label>
-                        <button class="btn danger" id="btnReset">Reset</button>
-                    </div>
-                    <div class="search-meta">
-                        <span id="stats">Loading…</span>
-                        <span class="filter-pill">Saved locally</span>
-                    </div>
-                    <div class="search-notes">
-                        <div class="note">Use the search to filter by control ID, title, or description. Results update
-                            instantly.
-                        </div>
+                    <label class="btn btn-ghost file-btn">
+                        Import JSON
+                        <input id="importJson" type="file" accept="application/json"/>
+                    </label>
+                    <button class="btn danger" id="btnReset">Reset</button>
+                </div>
+                <div class="search-notes">
+                    <div class="note">Use the search to filter by control ID, title, or description. Results update
+                        instantly.
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <section class="card card-summary soa-tips">
-                <h2>Tips</h2>
-                <ul class="tip-list">
-                    <li>Set <b>Applicable</b> to <b>N</b> → the exclusion justification is expected.</li>
-                    <li>Set <b>Applicable</b> to <b>Y</b> → tick inclusion reasons (LR/CO/BR/BP/RRA) and add a short
-                        rationale.
-                    </li>
-                    <li><b>Implemented</b> is independent (e.g., applicable but planned).</li>
-                </ul>
-            </section>
+        <section class="card card-summary soa-tips">
+            <h2>Tips</h2>
+            <ul class="tip-list">
+                <li>Set <b>Applicable</b> to <b>N</b> → the exclusion justification is expected.</li>
+                <li>Set <b>Applicable</b> to <b>Y</b> → tick inclusion reasons (LR/CO/BR/BP/RRA) and add a short
+                    rationale.
+                </li>
+                <li><b>Implemented</b> is independent (e.g., applicable but planned).</li>
+            </ul>
+        </section>
 
-            <section class="section-block" id="controls">
-                <div class="section-header">
-                    <div>
-                        <h3>Controls</h3>
-                        <div class="section-meta">Scope your SoA and complete each control row below.</div>
-                    </div>
+        <section class="section-block" id="controls">
+            <div class="section-header">
+                <div>
+                    <h3>Controls</h3>
+                    <div class="section-meta">Scope your SoA and complete each control row below.</div>
                 </div>
-                <div class="soa-list" id="list"></div>
-            </section>
-        </div>
-    </main>
+            </div>
+            <div class="soa-list" id="list"></div>
+        </section>
+    </div>
+</main>
 
-    <aside class="stats-dock" id="statsDock" aria-hidden="true">
-        <div class="stat">
-            <strong id="statTotalDock">0</strong>
-            <span>Total controls</span>
-        </div>
-        <div class="stat">
-            <strong id="statApplicableDock">0</strong>
-            <span>Applicable (Y)</span>
-        </div>
-        <div class="stat">
-            <strong id="statImplementedDock">0</strong>
-            <span>Implemented (Y)</span>
-        </div>
-    </aside>
+<aside class="stats-dock" id="statsDock" aria-hidden="true">
+    <div class="stat">
+        <strong id="statTotalDock">0</strong>
+        <span>Total controls</span>
+    </div>
+    <div class="stat">
+        <strong id="statApplicableDock">0</strong>
+        <span>Applicable (Y)</span>
+    </div>
+    <div class="stat">
+        <strong id="statImplementedDock">0</strong>
+        <span>Implemented (Y)</span>
+    </div>
+</aside>
 
-    <button class="theme-fab" id="btnTheme" type="button" aria-pressed="false" aria-label="Switch to dark theme"
-            title="Switch to dark theme">
-        <i class="ph-duotone ph-sun-horizon" aria-hidden="true"></i>
-        <i class="ph-duotone ph-cloud-moon" aria-hidden="true"></i>
-        <span class="sr-only">Toggle theme</span>
-    </button>
+<button class="theme-fab" id="btnTheme" type="button" aria-pressed="false" aria-label="Switch to dark theme"
+        title="Switch to dark theme">
+    <i class="ph-duotone ph-sun-horizon" aria-hidden="true"></i>
+    <i class="ph-duotone ph-cloud-moon" aria-hidden="true"></i>
+    <span class="sr-only">Toggle theme</span>
+</button>
 
-    <a class="coffee-fab" href="https://buymeacoffee.com/marcus.nightingale" target="_blank"
-       rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee">
-        <i class="ph-duotone ph-pizza" aria-hidden="true"></i>
-    </a>
+<a class="coffee-fab" href="https://buymeacoffee.com/marcus.nightingale" target="_blank"
+   rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee">
+    <i class="ph-duotone ph-pizza" aria-hidden="true"></i>
+</a>
 
-    <button class="back-to-top" id="btnTop" type="button" aria-label="Scroll to top" title="Scroll to top">
-        <i class="ph-duotone ph-arrow-up" aria-hidden="true"></i>
-    </button>
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="ed8df59c-e076-4528-86be-d8a1728edc47"></script>
-    <script src="scripts.js" defer></script>
+<button class="back-to-top" id="btnTop" type="button" aria-label="Scroll to top" title="Scroll to top">
+    <i class="ph-duotone ph-arrow-up" aria-hidden="true"></i>
+</button>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="ed8df59c-e076-4528-86be-d8a1728edc47"></script>
+<script src="scripts.js" defer></script>
 </body>
 </html>

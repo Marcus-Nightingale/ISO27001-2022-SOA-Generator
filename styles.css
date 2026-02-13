@@ -244,20 +244,23 @@ body::before {
 }
 
 .search-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 10px;
-    align-items: center
+    align-items: stretch
 }
 
 .search-input {
     flex: 1;
     border-radius: 999px;
     border: 1px solid var(--line);
-    padding: 10px 16px;
-    font-size: 0.95rem;
+    padding: 8px 14px;
+    font-size: 0.92rem;
     background: var(--paper);
     color: var(--ink);
-    outline: none
+    outline: none;
+    min-width: 0;
+    height: 38px
 }
 
 .search-input:focus {
@@ -266,15 +269,20 @@ body::before {
 }
 
 .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     border-radius: 999px;
     border: 1px solid transparent;
-    padding: 10px 16px;
+    padding: 8px 14px;
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     background: var(--accent);
     color: #fff;
-    box-shadow: 0 12px 22px var(--clay-shadow)
+    box-shadow: 0 12px 22px var(--clay-shadow);
+    height: 38px
 }
 
 .btn-ghost {
@@ -296,11 +304,12 @@ body::before {
 .search-meta {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     font-size: 0.85rem;
     color: var(--ink-soft);
-    gap: 8px;
-    flex-wrap: wrap
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    margin-top: 2px
 }
 
 .search-notes {
@@ -314,10 +323,12 @@ body::before {
     padding: 4px 10px;
     border-radius: 999px;
     border: 1px solid var(--line);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--ink-soft)
+    color: var(--ink-soft);
+    white-space: nowrap;
+    margin-left: auto
 }
 
 .card-summary {
@@ -917,8 +928,7 @@ body::before {
     }
 
     .search-row {
-        flex-direction: column;
-        align-items: stretch
+        grid-template-columns: 1fr
     }
 
     .control-list {
@@ -1034,8 +1044,26 @@ body.theme-dark .badge.bad {
 .action-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+  margin-top: 2px;
+}
+
+.action-row .btn,
+.action-row .file-btn {
+  height: 32px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+
+.action-row .btn {
+  box-shadow: none;
+}
+
+.action-row .file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .file-btn {
@@ -1320,8 +1348,9 @@ textarea {
 
 .reason-pill {
   flex: 1 1 200px;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 14px;
@@ -1350,6 +1379,9 @@ textarea {
   background: transparent;
   display: grid;
   place-items: center;
+  align-self: start;
+  justify-self: start;
+  margin-top: 2px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1374,23 +1406,34 @@ textarea {
 }
 
 .reason-pill .reason-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  row-gap: 6px;
+  column-gap: 8px;
+  align-items: start;
   min-width: 0;
 }
 
 .reason-pill .reason-text strong {
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: -16px;
 }
 
 .reason-pill .reason-text em {
+  grid-column: 1 / -1;
+  grid-row: 2;
   font-style: normal;
-  font-size: 0.88rem;
-  color: var(--ink-soft);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 
 .reason-pill:has(input:checked) {
@@ -1604,15 +1647,12 @@ body.theme-dark .theme-fab .ph-sun-horizon {
     transform: none;
   }
   .stats-dock {
+    left: 16px;
     right: 80px;
-    bottom: 72px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .coffee-fab {
-    top: auto;
-    bottom: 140px;
-    right: 16px;
+    top: 72px;
+    bottom: auto;
     transform: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

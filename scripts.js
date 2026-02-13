@@ -29,6 +29,7 @@
   }
 
   let state = loadState();
+  let didAutoCollapse = false;
 
   function setTheme(theme) {
     const isDark = theme === "dark";
@@ -64,6 +65,26 @@
     const s = (val ?? "").toString();
     if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
+  }
+
+  function isFilled(val) {
+    return (val ?? "").toString().trim().length > 0;
+  }
+
+  function isComplete(r) {
+    const hasApplicable = r.applicable === "Y" || r.applicable === "N";
+    const hasImplemented = r.implemented === "Y" || r.implemented === "N";
+    if (!hasApplicable || !hasImplemented) return false;
+
+    if (r.applicable === "N" && !isFilled(r.exclusionJustification)) return false;
+    if (r.applicable === "Y") {
+      const reasonsSelected = Object.values(r.reasons || {}).some(Boolean);
+      if (!reasonsSelected) return false;
+      if (!isFilled(r.inclusionReason)) return false;
+    }
+
+    if (r.implemented === "Y" && !isFilled(r.implementationDetails)) return false;
+    return true;
   }
 
   function computeStats() {
@@ -152,6 +173,9 @@
       }
 
       const r = rowState(item.id);
+      if (!didAutoCollapse) {
+        r.collapsed = isComplete(r);
+      }
       const badge = statusBadge(r);
 
       const row = document.createElement("div");
@@ -284,6 +308,7 @@
       // show/hide conditional sections
       applyConditionalVisibility(row, r);
     }
+    if (!didAutoCollapse) didAutoCollapse = true;
 
     saveState(state);
   }
@@ -367,50 +392,281 @@
     return ITEMS.find(x => x.type === "domain" && x.id === domainId) || null;
   }
 
-  function exportCsv() {
-    // template-aligned columns:
-    // CONTROL, CONTROL TITLE & DESCRIPTION, APPLICABLE? (Y/N), JUSTIFICATION FOR EXCLUSION,
-    // IMPLEMENTED? (Y/N), IMPLEMENTATION DETAILS, LR, CO, BR / BP, RRA, REASON FOR INCLUSION
-    const lines = [];
-    lines.push([
-      "CONTROL",
-      "CONTROL TITLE & DESCRIPTION",
-      "APPLICABLE? (Y/N)",
-      "JUSTIFICATION FOR EXCLUSION",
-      "IMPLEMENTED? (Y/N)",
-      "IMPLEMENTATION DETAILS",
-      "LR",
-      "CO",
-      "BR / BP",
-      "RRA",
-      "REASON FOR INCLUSION"
-    ].map(escapeCsv).join(","));
-
-    for (const item of ITEMS) {
-      if (item.type !== "control") continue;
-      const r = rowState(item.id);
-      const brbp = [r.reasons.BR ? "BR" : "", r.reasons.BP ? "BP" : ""].filter(Boolean).join(";");
-      lines.push([
-        item.id,
-        item.raw || `${item.title}\n${item.description}`,
-        r.applicable,
-        r.exclusionJustification,
-        r.implemented,
-        r.implementationDetails,
-        r.reasons.LR ? "Y" : "",
-        r.reasons.CO ? "Y" : "",
-        brbp ? "Y (" + brbp + ")" : "",
-        r.reasons.RRA ? "Y" : "",
-        r.inclusionReason
-      ].map(escapeCsv).join(","));
+  function exportXlsx() {
+    if (!window.XLSX) {
+      alert("XLSX export unavailable. Please reload and try again.");
+      return;
     }
 
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "soa_iso27001_2022.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const cssVar = (name) => {
+      const bodyVal = getComputedStyle(document.body).getPropertyValue(name).trim();
+      if (bodyVal) return bodyVal;
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    };
+
+    const toHex = (input) => {
+      if (!input) return "000000";
+      const raw = input.trim();
+      if (raw.startsWith("#")) {
+        if (raw.length === 4) {
+          return (raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3]).toUpperCase();
+        }
+        if (raw.length === 7) return raw.slice(1).toUpperCase();
+      }
+      const m = raw.match(/rgba?\s*\(([^)]+)\)/i);
+      if (m) {
+        const parts = m[1].split(",").map(v => parseFloat(v.trim()));
+        const [r, g, b] = parts;
+        const clamp = (n) => Math.max(0, Math.min(255, Math.round(n || 0)));
+        return [clamp(r), clamp(g), clamp(b)].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+      }
+      return "000000";
+    };
+
+    const isDark = document.body.classList.contains("theme-dark");
+    const bannerBg = toHex(isDark ? cssVar("--paper") : cssVar("--ink"));
+    const bannerText = toHex(isDark ? cssVar("--ink") : cssVar("--paper"));
+    const subText = bannerText;
+    const stripeColor = toHex(cssVar("--accent"));
+    const accent = toHex(cssVar("--accent"));
+    const ink = toHex(cssVar("--ink"));
+    const paper = toHex(cssVar("--paper"));
+    const surfaceStrong = toHex(cssVar("--surface-strong")) || paper;
+    const line = toHex(cssVar("--line"));
+    const sheetText = isDark ? "000000" : ink;
+    const headerText = isDark ? "000000" : "FFFFFF";
+
+    const wb = XLSX.utils.book_new();
+
+    const darkFill = { patternType: "solid", fgColor: { rgb: bannerBg } };
+    const stripeFill = { patternType: "solid", fgColor: { rgb: stripeColor } };
+    const whiteFont = { color: { rgb: bannerText } };
+    const softWhite = { color: { rgb: subText } };
+    const border = {
+      top: { style: "thin", color: { rgb: line } },
+      bottom: { style: "thin", color: { rgb: line } },
+      left: { style: "thin", color: { rgb: line } },
+      right: { style: "thin", color: { rgb: line } }
+    };
+    const headerStyle = {
+      font: { bold: true, color: { rgb: headerText }, sz: 10 },
+      fill: { patternType: "solid", fgColor: { rgb: accent } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border
+    };
+    const headerStyleLeft = {
+      ...headerStyle,
+      alignment: { horizontal: "left", vertical: "center", wrapText: true }
+    };
+    const domainStyle = {
+      font: { bold: true, color: { rgb: ink }, sz: 10 },
+      fill: { patternType: "solid", fgColor: { rgb: surfaceStrong } },
+      alignment: { horizontal: "left", vertical: "center", wrapText: true },
+      border
+    };
+    const domainCenterStyle = {
+      ...domainStyle,
+      alignment: { horizontal: "center", vertical: "center", wrapText: true }
+    };
+    const cellStyle = {
+      font: { color: { rgb: sheetText }, sz: 10 },
+      alignment: { horizontal: "left", vertical: "top", wrapText: true },
+      border
+    };
+    const cellCenterStyle = {
+      ...cellStyle,
+      alignment: { horizontal: "center", vertical: "center", wrapText: true }
+    };
+
+    const setCell = (sheet, addr, value, style) => {
+      sheet[addr] = { t: "s", v: value, s: style };
+    };
+
+    const applyRangeStyle = (sheet, range, style) => {
+      for (let r = range.s.r; r <= range.e.r; r++) {
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const ref = XLSX.utils.encode_cell({ r, c });
+          if (!sheet[ref]) {
+            sheet[ref] = { t: "s", v: "" };
+          }
+          sheet[ref].s = { ...(sheet[ref].s || {}), ...style };
+        }
+      }
+    };
+
+    const controlSheet = XLSX.utils.aoa_to_sheet([[]]);
+    // Layout ranges (0-indexed)
+    const bannerRange = { s: { r: 0, c: 1 }, e: { r: 6, c: 7 } }; // B1:H7
+    const stripeRange = { s: { r: 0, c: 0 }, e: { r: 6, c: 0 } }; // A1:A7
+
+    applyRangeStyle(controlSheet, bannerRange, { fill: darkFill });
+    applyRangeStyle(controlSheet, stripeRange, { fill: stripeFill });
+
+    controlSheet["!merges"] = [
+      { s: { r: 1, c: 1 }, e: { r: 1, c: 7 } }, // B2:H2
+      { s: { r: 2, c: 1 }, e: { r: 3, c: 7 } }, // B3:H4
+      { s: { r: 4, c: 1 }, e: { r: 6, c: 7 } }  // B5:H7
+    ];
+
+    setCell(controlSheet, "B2", "ISO 27001:2022", {
+      font: { sz: 12, bold: true, ...whiteFont },
+      fill: darkFill,
+      alignment: { horizontal: "left", vertical: "center" }
+    });
+    setCell(controlSheet, "B3", "Statement of\nApplicability (SOA)", {
+      font: { sz: 26, bold: true, ...whiteFont },
+      fill: darkFill,
+      alignment: { horizontal: "left", vertical: "center", wrapText: true }
+    });
+    setCell(controlSheet, "B5", "Classification: CONFIDENTIAL\nVersion:\nLast Review:", {
+      font: { sz: 11, ...softWhite },
+      fill: darkFill,
+      alignment: { horizontal: "left", vertical: "top", wrapText: true }
+    });
+
+    controlSheet["!cols"] = [
+      { wch: 2 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 }
+    ];
+    controlSheet["!rows"] = [
+      { hpt: 6 },
+      { hpt: 20 },
+      { hpt: 32 },
+      { hpt: 32 },
+      { hpt: 20 },
+      { hpt: 26 },
+      { hpt: 20 }
+    ];
+    controlSheet["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 6, c: 7 } });
+
+    XLSX.utils.book_append_sheet(wb, controlSheet, "Control");
+
+    const historyRows = [
+      ["Version", "Date", "Author", "Approver", "Description of Changes"]
+    ];
+    const historySheet = XLSX.utils.aoa_to_sheet(historyRows);
+    applyRangeStyle(historySheet, { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, headerStyle);
+    historySheet["!cols"] = [
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 40 }
+    ];
+    XLSX.utils.book_append_sheet(wb, historySheet, "History");
+
+    const keyRows = [
+      ["KEY", "Description"],
+      ["LR", "Legal Requirement"],
+      ["CO", "Contractual Obligations"],
+      ["BR", "Business Requirements"],
+      ["BP", "Best Practices"],
+      ["RRA", "Results of Risk Assessment"]
+    ];
+    const keySheet = XLSX.utils.aoa_to_sheet(keyRows);
+    applyRangeStyle(keySheet, { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, headerStyle);
+    keySheet["!cols"] = [
+      { wch: 8 },
+      { wch: 32 }
+    ];
+    XLSX.utils.book_append_sheet(wb, keySheet, "Key");
+
+    const soaSheet = XLSX.utils.aoa_to_sheet([[]]);
+    const soaMerges = [];
+    const soaRows = [];
+    let row = 0;
+
+    const setSoaCell = (r, c, value, style) => {
+      setCell(soaSheet, XLSX.utils.encode_cell({ r, c }), value, style);
+    };
+
+    // Row 1 headers
+    setSoaCell(row, 0, "Control", headerStyle);
+    setSoaCell(row, 1, "CONTROL TITLE & DESCRIPTION", headerStyleLeft);
+    setSoaCell(row, 2, "APPLICABLE?\n(Y/N)", headerStyle);
+    setSoaCell(row, 3, "JUSTIFICATION FOR EXCLUSION", headerStyleLeft);
+    setSoaCell(row, 4, "IMPLEMENTED?\n(Y/N)", headerStyle);
+    setSoaCell(row, 5, "IMPLEMENTATION DETAILS", headerStyleLeft);
+    setSoaCell(row, 6, "SELECTED CONTROLS", headerStyle);
+    setSoaCell(row, 10, "REASON FOR INCLUSION", headerStyle);
+    soaMerges.push({ s: { r: row, c: 6 }, e: { r: row, c: 9 } }); // G1:J1
+    soaMerges.push({ s: { r: row, c: 10 }, e: { r: row + 1, c: 10 } }); // K1:K2
+    applyRangeStyle(soaSheet, { s: { r: row, c: 6 }, e: { r: row, c: 9 } }, headerStyle);
+    applyRangeStyle(soaSheet, { s: { r: row, c: 10 }, e: { r: row + 1, c: 10 } }, headerStyle);
+    soaRows[row] = { hpt: 24 };
+    row++;
+
+    const addDomainRow = (domain, showReason) => {
+      setSoaCell(row, 0, domain.id, domainStyle);
+      setSoaCell(row, 1, domain.label, domainStyle);
+      soaMerges.push({ s: { r: row, c: 1 }, e: { r: row, c: 5 } }); // B:F
+      applyRangeStyle(soaSheet, { s: { r: row, c: 1 }, e: { r: row, c: 5 } }, domainStyle);
+      setSoaCell(row, 6, "LR", domainCenterStyle);
+      setSoaCell(row, 7, "CO", domainCenterStyle);
+      setSoaCell(row, 8, "BR / BP", domainCenterStyle);
+      setSoaCell(row, 9, "RRA", domainCenterStyle);
+      if (showReason) {
+        setSoaCell(row, 10, "REASON FOR INCLUSION", domainCenterStyle);
+      }
+      soaRows[row] = { hpt: 20 };
+      row++;
+    };
+
+    const addControlRow = (item) => {
+      const r = rowState(item.id);
+      const brbp = [r.reasons.BR ? "BR" : "", r.reasons.BP ? "BP" : ""].filter(Boolean).join(";");
+      setSoaCell(row, 0, item.id, cellCenterStyle);
+      setSoaCell(row, 1, item.raw || `${item.title}\n${item.description}`, cellStyle);
+      setSoaCell(row, 2, r.applicable || "", cellCenterStyle);
+      setSoaCell(row, 3, r.exclusionJustification || "", cellStyle);
+      setSoaCell(row, 4, r.implemented || "", cellCenterStyle);
+      setSoaCell(row, 5, r.implementationDetails || "", cellStyle);
+      setSoaCell(row, 6, r.reasons.LR ? "Y" : "", cellCenterStyle);
+      setSoaCell(row, 7, r.reasons.CO ? "Y" : "", cellCenterStyle);
+      setSoaCell(row, 8, brbp ? "Y (" + brbp + ")" : "", cellCenterStyle);
+      setSoaCell(row, 9, r.reasons.RRA ? "Y" : "", cellCenterStyle);
+      setSoaCell(row, 10, r.inclusionReason || "", cellStyle);
+      soaRows[row] = { hpt: 54 };
+      row++;
+    };
+
+    let firstDomain = true;
+    for (const item of ITEMS) {
+      if (item.type === "domain") {
+        addDomainRow(item, !firstDomain);
+        if (firstDomain) firstDomain = false;
+        continue;
+      }
+      if (item.type === "control") {
+        addControlRow(item);
+      }
+    }
+
+    soaSheet["!merges"] = soaMerges;
+    soaSheet["!cols"] = [
+      { wch: 10 },
+      { wch: 50 },
+      { wch: 12 },
+      { wch: 28 },
+      { wch: 12 },
+      { wch: 28 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 10 },
+      { wch: 8 },
+      { wch: 30 }
+    ];
+    soaSheet["!rows"] = soaRows;
+    soaSheet["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: row - 1, c: 10 } });
+    XLSX.utils.book_append_sheet(wb, soaSheet, "SOA");
+
+    XLSX.writeFile(wb, "soa_iso27001_2022.xlsx");
   }
 
   function exportRows() {
@@ -497,8 +753,9 @@
 
   // Wiring
   document.getElementById("q").addEventListener("input", () => render());
-  document.getElementById("btnCsv").addEventListener("click", exportCsv);
   document.getElementById("btnJson").addEventListener("click", exportJson);
+  const btnXlsx = document.getElementById("btnXlsx");
+  if (btnXlsx) btnXlsx.addEventListener("click", exportXlsx);
   document.getElementById("btnReset").addEventListener("click", resetAll);
   const themeBtn = document.getElementById("btnTheme");
   if (themeBtn) {
