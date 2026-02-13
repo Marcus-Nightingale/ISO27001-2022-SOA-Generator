@@ -24,4 +24,4 @@ Single-file ISO 27001:2022 Statement of Applicability (SoA) generator. Search co
 All data stays in your browser unless you export it.
 
 ## Live URL
-https://marcus-nightingale.github.io/ISO27001-2022-SEO-Generator/
+https://marcus-nightingale.github.io/ISO27001-2022-SOA-Generator/
