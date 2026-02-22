@@ -148,7 +148,7 @@ body::before {
 .skip-link {
     position: absolute;
     left: -9999px;
-    top: 16px;
+    top: 43px;
     padding: 10px 14px;
     background: var(--paper);
     border: 2px solid var(--accent);
@@ -159,7 +159,9 @@ body::before {
 }
 
 .skip-link:focus {
-    left: 16px
+    left: 81px;
+    outline: none;
+    box-shadow: none
 }
 
 .page {
