@@ -91,21 +91,23 @@
 
         <section class="card card-search soa-toolbar">
             <h2>Search & actions</h2>
-            <div class="search-field">
+            <div class="search-field" role="search">
                 <div class="search-row">
-                    <input id="q" class="search-input" type="text"
-                           placeholder="Search controls (e.g. logging, supplier, backup, A.8.15)…"/>
+                    <input id="q" class="search-input" type="search"
+                           placeholder="Search controls (e.g. logging, supplier, backup, A.8.15)…"
+                           aria-label="Search ISO 27001 controls"
+                           aria-describedby="search-notes-text"/>
                 </div>
                 <div class="action-row">
-                        <button class="btn" id="btnXlsx">Export XLSX</button>
-                        <button class="btn btn-ghost" id="btnJson">Export JSON</button>
-                    <label class="btn btn-ghost file-btn">
+                        <button class="btn" id="btnXlsx" data-action="export-xlsx" aria-label="Export SoA to Excel (.xlsx)">Export XLSX</button>
+                        <button class="btn btn-ghost" id="btnJson" data-action="export-json" aria-label="Export SoA to JSON">Export JSON</button>
+                    <label class="btn btn-ghost file-btn" aria-label="Import SoA from JSON file">
                         Import JSON
                         <input id="importJson" type="file" accept="application/json"/>
                     </label>
-                    <button class="btn danger" id="btnReset">Reset</button>
+                    <button class="btn danger" id="btnReset" data-action="reset" aria-label="Reset all SoA data">Reset</button>
                 </div>
-                <div class="search-notes">
+                <div class="search-notes" id="search-notes-text">
                     <div class="note">Use the search to filter by control ID, title, or description. Results update
                         instantly.
                     </div>
@@ -131,7 +133,24 @@
                     <div class="section-meta">Scope your SoA and complete each control row below.</div>
                 </div>
             </div>
-            <div class="soa-list" id="list"></div>
+            <div class="soa-list" id="list" role="region" aria-label="ISO 27001 Controls List">
+                <table class="soa-table-fallback">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Control Title</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Fallback content for crawlers -->
+                        <tr><td>A.5.1</td><td>Policies for information security</td><td>Information security policy and topic-specific policies shall be defined, approved by management, published, acknowledged by relevant personnel and relevant interested parties, and reviewed at planned intervals and if significant changes occur.</td></tr>
+                        <tr><td>A.5.7</td><td>Threat intelligence</td><td>Information relating to information security threats shall be collected and analysed to produce threat intelligence.</td></tr>
+                        <tr><td>A.8.1</td><td>User endpoint devices</td><td>Information held on, processed by or accessible via user endpoint devices shall be protected.</td></tr>
+                        <tr><td>A.8.16</td><td>Monitoring activities</td><td>Networks, systems and applications shall be monitored for anomalous behaviour and appropriate actions taken to evaluate potential information security incidents.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 </main>
